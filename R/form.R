@@ -73,13 +73,14 @@ format.input <- function(x, ...) {
 }
 
 parse_fields <- function(form) {
-  raw <- html_nodes(form, "input, select, textarea")
+  raw <- html_nodes(form, "input, select, textarea, button")
 
   fields <- lapply(raw, function(x) {
     switch(XML::xmlName(x),
       textarea = parse_textarea(x),
       input = parse_input(x),
-      select = parse_select(x)
+      select = parse_select(x),
+      button = parse_button(x)
     )
   })
   names(fields) <- pluck(fields, "name")
@@ -115,7 +116,7 @@ parse_input <- function(input) {
     list(
       name = attr$name,
       type = attr$type %||% "text",
-      value = attr$value,
+      value = attr$value %||% NULL,
       checked = attr$checked,
       disabled = attr$disabled,
       readonly = attr$readonly,
@@ -184,6 +185,29 @@ format.textarea <- function(x, ...) {
   paste0("<textarea> '", x$name, "' [", nchar(x$value), " char]")
 }
 
+parse_button <- function(button) {
+  stopifnot(inherits(button, "XMLAbstractNode"), XML::xmlName(button) == "button")
+  attr <- as.list(XML::xmlAttrs(button))
+
+  structure(
+    list(
+      name = attr$name %||% "<unnamed>",
+      type = attr$type,
+      value = attr$value,
+      checked = attr$checked,
+      disabled = attr$disabled,
+      readonly = attr$readonly,
+      required = attr$required %||% FALSE
+    ),
+    class = "button"
+  )
+}
+
+#' @export
+format.button <- function(x, ...) {
+  paste0("<button ", x$type, "> '", x$name)
+}
+
 
 #' Set values in a form.
 #'
@@ -239,12 +263,13 @@ set_values <- function(form, ...) {
 #' f1 <- set_values(f0, entry.564397473 = "abc")
 submit_form <- function(session, form, submit = NULL, ...) {
   request <- submit_request(form, submit)
+  url <- XML::getRelativeURL(session$url, form$url)
 
   # Make request
   if (request$method == "GET") {
-    request_GET(session, url = request$url, params = request$values, ...)
+    request_GET(session, url = url, params = request$values, ...)
   } else if (request$method == "POST") {
-    request_POST(session, url = request$url, body = request$values,
+    request_POST(session, url = url, body = request$values,
       encode = request$encode, ...)
   } else {
     stop("Unknown method: ", request$method, call. = FALSE)
@@ -276,7 +301,7 @@ submit_request <- function(form, submit = NULL) {
   url <- form$url
 
   fields <- form$fields
-  fields <- Filter(function(x) !is.null(x$value), fields)
+  fields <- Filter(function(x) length(x$value) > 0, fields)
   fields <- fields[setdiff(names(fields), other_submits)]
 
   values <- pluck(fields, "value")

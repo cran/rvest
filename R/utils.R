@@ -1,13 +1,5 @@
 "%||%" <- function(a, b) if (length(a) == 0) b else a
 
-pluck <- function(x, name, type) {
-  if (missing(type)) {
-    lapply(x, "[[", name)
-  } else {
-    vapply(x, "[[", name, FUN.VALUE = type)
-  }
-}
-
 vpluck_with_default <- function(xs, i, default) {
   extract <- function(x) {
     if (i %in% names(x)) {
@@ -26,15 +18,20 @@ format_list <- function(x, indent = 0) {
   paste0(spaces, formatted, collapse = "\n")
 }
 
+is_document <- function(x) {
+  inherits(x, "XMLAbstractDocument")
+}
 is_node <- function(x) {
-  inherits(x, "XMLInternalElementNode") || inherits(x, "HTMLInternalDocument")
+  inherits(x, "XMLAbstractNode")
 }
 is_node_list <- function(x) {
-  inherits(x, "XMLNodeSet")
+  inherits(x, "XMLNodeSet") || inherits(x, "XMLNodeList")
 }
 
 xml_apply <- function(x, f, ..., .type) {
-  if (is_node(x)) {
+  if (is_document(x)) {
+    f(XML::xmlRoot(x), ...)
+  } else if (is_node(x)) {
     f(x, ...)
   } else if (is_node_list(x)) {
     if (missing(.type)) {

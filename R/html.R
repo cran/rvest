@@ -2,6 +2,8 @@
 #'
 #' @param x A url, a local path, a string containing html, or a response from
 #'   an httr request.
+#' @param ... If \code{x} is a URL, additional arguments are passed on to
+#'   \code{\link[httr]{GET}()}.
 #' @param encoding Specify encoding of document. See \code{\link{iconvlist}()}
 #'   for complete list. If you have problems determining the correct encoding,
 #'   try \code{\link[stringi]{stri_enc_detect}}
@@ -9,6 +11,7 @@
 #' @examples
 #' # From a url:
 #' google <- html("http://google.com")
+#' google %>% xml_structure()
 #' google %>% html_nodes("p")
 #'
 #' # From a string: (minimal html 5 document)
@@ -21,47 +24,13 @@
 #'
 #' # From an httr request
 #' google2 <- html(httr::GET("http://google.com"))
-html <- function(x, encoding = NULL) UseMethod("html")
-
-#' @export
-html.character <- function(x, encoding = NULL) {
-  if (grepl("^http", x)) {
-    r <- httr::GET(x)
-    html(r, encoding = encoding)
-  } else if (grepl("<|>", x)) {
-    XML::htmlParse(x, asText = TRUE, encoding = encoding)
-  } else {
-    XML::htmlParse(x, asText = FALSE, encoding = encoding)
-  }
-}
-
-#' @export
-html.response <- function(x, encoding = NULL) {
-  httr::stop_for_status(x)
-
-  text <- httr::content(x, "text")
-  xml <- XML::htmlParse(text, asText = TRUE,
-    encoding = encoding %||% default_encoding(x))
-  XML::docName(xml) <- x$url
-  xml
-}
-
-default_encoding <- function(x) {
-  type <- httr::headers(x)$`Content-Type`
-  if (is.null(type)) return(NULL)
-
-  media <- httr::parse_media(type)
-  media$params$charset
-}
-
-#' @export
-html.XMLAbstractDocument <- function(x, encoding = NULL) {
-  x
+html <- function(x, ..., encoding = NULL) {
+  parse(x, XML::htmlParse, ..., encoding = encoding)
 }
 
 #' Extract attributes, text and tag name from html.
 #'
-#' @param x Either a complete document (HTMLInternalDocument),
+#' @param x Either a complete document (XMLInternalDocument),
 #'   a list of tags (XMLNodeSet) or a single tag (XMLInternalElementNode).
 #' @param name Name of attribute to extract.
 #' @param ... Other arguments passed onto \code{\link[XML]{xmlValue}()}.
@@ -98,6 +67,12 @@ html_tag <- function(x) {
 
 #' @rdname html_text
 #' @export
+html_children <- function(x) {
+  xml_apply(x, XML::xmlChildren)
+}
+
+#' @rdname html_text
+#' @export
 html_attrs <- function(x) {
   xml_apply(x, XML::xmlAttrs)
 }
@@ -107,14 +82,16 @@ html_attrs <- function(x) {
 #'   not exist in every node.
 #' @export
 html_attr <- function(x, name, default = NA_character_) {
-  xml_apply(x, xml_attr, name, default = default, .type = character(1))
-}
+  xml_attr <- function(x, name, default) {
+    if (is.null(x)) return(default)
 
-xml_attr <- function(x, name, default) {
-  attr <- XML::xmlAttrs(x)
-  if (name %in% names(attr)) {
-    attr[[name]]
-  } else {
-    default
+    attr <- XML::xmlAttrs(x)
+    if (name %in% names(attr)) {
+      attr[[name]]
+    } else {
+      default
+    }
   }
+
+  xml_apply(x, xml_attr, name, default = default, .type = character(1))
 }
