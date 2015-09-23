@@ -1,4 +1,4 @@
-## ----, echo = FALSE------------------------------------------------------
+## ---- echo = FALSE-------------------------------------------------------
 embed_png <- function(path, dpi = NULL) {
   meta <- attr(png::readPNG(path, native = TRUE, info = TRUE), "info")
   if (!is.null(dpi)) meta$dpi <- rep(dpi, 2)
@@ -13,22 +13,22 @@ embed_png <- function(path, dpi = NULL) {
 
 knitr::opts_chunk$set(comment = "#>", collapse = TRUE)
 
-## ----, echo = FALSE------------------------------------------------------
+## ---- echo = FALSE-------------------------------------------------------
 embed_png("selectorgadget-1.png")
 
-## ----, echo = FALSE------------------------------------------------------
+## ---- echo = FALSE-------------------------------------------------------
 embed_png("selectorgadget-2.png")
 
-## ----, echo = FALSE------------------------------------------------------
+## ---- echo = FALSE-------------------------------------------------------
 embed_png("selectorgadget-3.png")
 
-## ----, echo = FALSE------------------------------------------------------
+## ---- echo = FALSE-------------------------------------------------------
 embed_png("selectorgadget-4.png")
 embed_png("selectorgadget-5.png")
 
 ## ------------------------------------------------------------------------
 library(rvest)
-html <- html("http://www.imdb.com/title/tt1490017/")
+html <- read_html("http://www.imdb.com/title/tt1490017/")
 cast <- html_nodes(html, "#titleCast .itemprop")
 length(cast)
 cast[1:2]

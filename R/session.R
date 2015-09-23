@@ -16,7 +16,9 @@
 #' s <- html_session("http://had.co.nz")
 #' s %>% jump_to("thesis") %>% jump_to("/") %>% session_history()
 #' s %>% jump_to("thesis") %>% back() %>% session_history()
+#' \donttest{
 #' s %>% follow_link(css = "p a")
+#' }
 html_session <- function(url, ...) {
   session <- structure(
     list(
@@ -64,7 +66,7 @@ request_POST <- function(x, url, ...) {
 show <- function(x) {
   temp <- tempfile()
   writeBin(httr::content(x$response, "raw"), temp)
-  browseURL(temp)
+  utils::browseURL(temp)
 }
 
 #' @export
@@ -92,7 +94,7 @@ is.session <- function(x) inherits(x, "session")
 jump_to <- function(x, url, ...) {
   stopifnot(is.session(x))
 
-  url <- XML::getRelativeURL(url, x$url)
+  url <- xml2::url_absolute(url, x$url)
 
   x$back <- c(url, x$back)
   x$forward <- character()
@@ -124,10 +126,11 @@ follow_link <- function(x, i, css, xpath, ...) {
       a <- links[[which(match)[1]]]
     }
   } else {
-    a <- html_node(x, css = css, xpath = xpath)
-    if (is.null(a)) {
+    links <- html_nodes(x, css = css, xpath = xpath)
+    if (length(links) == 0) {
       stop("No links matched that expression", call. = FALSE)
     }
+    a <- links[[1]]
   }
 
   url <- html_attr(a, "href")
@@ -183,17 +186,17 @@ html_form.session <- function(x) html_form(html(x))
 #' @export
 html_table.session <- function(x, header = NA, trim = TRUE, fill = FALSE,
                                dec = ".") {
-  html_table(html(x), header = header, trim = trim, fill = fill, dec = dec)
+  html_table(xml2::read_html(x), header = header, trim = trim, fill = fill, dec = dec)
 }
 
 #' @export
 html_node.session <- function(x, css, xpath) {
-  html_node(html(x), css, xpath)
+  html_node(xml2::read_html(x), css, xpath)
 }
 
 #' @export
 html_nodes.session <- function(x, css, xpath) {
-  html_nodes(html(x), css, xpath)
+  html_nodes(xml2::read_html(x), css, xpath)
 }
 
 is_html <- function(x) {
