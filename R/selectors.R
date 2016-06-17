@@ -38,7 +38,7 @@
 #'
 #' @param x Either a document, a node set or a single node.
 #' @param css,xpath Nodes to select. Supply one of \code{css} or \code{xpath}
-#'   depending on whether you want to use a css or xpath selector.
+#'   depending on whether you want to use a css or xpath 1.0 selector.
 #' @export
 #' @examples
 #' # CSS selectors ----------------------------------------------
@@ -52,12 +52,15 @@
 #' ateam %>% html_nodes("center") %>% html_nodes("td")
 #' ateam %>% html_nodes("center") %>% html_nodes("font")
 #'
-#' # When applied to a list of nodes, html_nodes() collapses output
-#' # html_node() throws an error
 #' td <- ateam %>% html_nodes("center") %>% html_nodes("td")
+#' td
+#' # When applied to a list of nodes, html_nodes() returns all nodes,
+#' # collapsing results into a new nodelist.
 #' td %>% html_nodes("font")
-#' \dontrun{
-#' td %>% html_node("font")
+#' # html_node() returns the first matching node. If there are no matching
+#' # nodes, it returns a "missing" node
+#' if (utils::packageVersion("xml2") > "0.1.2") {
+#'   td %>% html_node("font")
 #' }
 #'
 #' # To pick out an element at specified position, use magrittr::extract2
@@ -94,7 +97,11 @@ html_node <- function(x, css, xpath) {
 
 #' @export
 html_node.default <- function(x, css, xpath) {
-  xml2::xml_find_one(x, make_selector(css, xpath))
+  if (utils::packageVersion("xml2") > "0.1.2") {
+    xml2::xml_find_first(x, make_selector(css, xpath))
+  } else {
+    xml2::xml_find_one(x, make_selector(css, xpath))
+  }
 }
 
 make_selector <- function(css, xpath) {

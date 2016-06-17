@@ -13,9 +13,9 @@
 #' @examples
 #' # http://stackoverflow.com/questions/15853204
 #'
-#' s <- html_session("http://had.co.nz")
-#' s %>% jump_to("thesis") %>% jump_to("/") %>% session_history()
-#' s %>% jump_to("thesis") %>% back() %>% session_history()
+#' s <- html_session("http://hadley.nz")
+#' s %>% jump_to("hadley-wickham.jpg") %>% jump_to("/") %>% session_history()
+#' s %>% jump_to("hadley-wickham.jpg") %>% back() %>% session_history()
 #' \donttest{
 #' s %>% follow_link(css = "p a")
 #' }
@@ -85,19 +85,19 @@ is.session <- function(x) inherits(x, "session")
 #' @export
 #' @examples
 #' \donttest{
-#' s <- html_session("http://had.co.nz")
-#' s %>% jump_to("thesis/")
-#' s %>% follow_link("vita")
-#' s %>% follow_link(3)
-#' s %>% follow_link("vita")
+#' s <- html_session("http://hadley.nz")
+#' s <- s %>% follow_link("github")
+#' s <- s %>% back()
+#' s %>% follow_link("readr")
 #' }
 jump_to <- function(x, url, ...) {
   stopifnot(is.session(x))
 
+  x$back <- c(x$url, x$back)
+  x$forward <- character()
+
   url <- xml2::url_absolute(url, x$url)
 
-  x$back <- c(url, x$back)
-  x$forward <- character()
   request_GET(x, url, ...)
 }
 
@@ -166,7 +166,7 @@ back <- function(x) {
 
   url <- x$back[[1]]
   x$back <- x$back[-1]
-  x$forward <- c(url, x$forward)
+  x$forward <- c(x$url, x$forward)
 
   request_GET(x, url)
 }

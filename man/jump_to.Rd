@@ -22,10 +22,10 @@ follow_link(x, i, css, xpath, ...)
 }}
 
 \item{css}{Nodes to select. Supply one of \code{css} or \code{xpath}
-depending on whether you want to use a css or xpath selector.}
+depending on whether you want to use a css or xpath 1.0 selector.}
 
 \item{xpath}{Nodes to select. Supply one of \code{css} or \code{xpath}
-depending on whether you want to use a css or xpath selector.}
+depending on whether you want to use a css or xpath 1.0 selector.}
 }
 \description{
 \code{jump_to()} takes a url (either relative or absolute);
@@ -34,11 +34,10 @@ tag) on the current page.
 }
 \examples{
 \donttest{
-s <- html_session("http://had.co.nz")
-s \%>\% jump_to("thesis/")
-s \%>\% follow_link("vita")
-s \%>\% follow_link(3)
-s \%>\% follow_link("vita")
+s <- html_session("http://hadley.nz")
+s <- s \%>\% follow_link("github")
+s <- s \%>\% back()
+s \%>\% follow_link("readr")
 }
 }
 

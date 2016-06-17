@@ -13,7 +13,7 @@ html_node(x, css, xpath)
 \item{x}{Either a document, a node set or a single node.}
 
 \item{css, xpath}{Nodes to select. Supply one of \code{css} or \code{xpath}
-depending on whether you want to use a css or xpath selector.}
+depending on whether you want to use a css or xpath 1.0 selector.}
 }
 \description{
 More easily extract pieces out of HTML documents using XPath and css
@@ -67,12 +67,15 @@ html_nodes(ateam, "center font b")
 ateam \%>\% html_nodes("center") \%>\% html_nodes("td")
 ateam \%>\% html_nodes("center") \%>\% html_nodes("font")
 
-# When applied to a list of nodes, html_nodes() collapses output
-# html_node() throws an error
 td <- ateam \%>\% html_nodes("center") \%>\% html_nodes("td")
+td
+# When applied to a list of nodes, html_nodes() returns all nodes,
+# collapsing results into a new nodelist.
 td \%>\% html_nodes("font")
-\dontrun{
-td \%>\% html_node("font")
+# html_node() returns the first matching node. If there are no matching
+# nodes, it returns a "missing" node
+if (utils::packageVersion("xml2") > "0.1.2") {
+  td \%>\% html_node("font")
 }
 
 # To pick out an element at specified position, use magrittr::extract2
