@@ -1,81 +1,61 @@
-#' Parse forms in a page.
+#' Parse forms and set values
+#'
+#' Use `html_form()` to extract a form, set values with `html_form_set()`,
+#' and submit it with `html_form_submit()`.
 #'
 #' @export
-#' @param x A node, node set or document.
+#' @inheritParams html_name
+#' @param base_url Base url of underlying HTML document. The default, `NULL`,
+#'   uses the url of the HTML document underlying `x`.
 #' @seealso HTML 4.01 form specification:
 #'   <http://www.w3.org/TR/html401/interact/forms.html>
-#' @examples
-#' \donttest{
-#' html_form(read_html("https://hadley.wufoo.com/forms/libraryrequire-quiz/"))
-#' html_form(read_html("https://hadley.wufoo.com/forms/r-journal-submission/"))
+#' @return
+#' * `html_form()` returns as S3 object with class `rvest_form` when applied
+#'   to a single element. It returns a list of `rvest_form` objects when
+#'   applied to multiple elements or a document.
 #'
-#' box_office <- read_html("http://www.boxofficemojo.com/movies/?id=ateam.htm")
-#' box_office %>% html_node("form") %>% html_form()
+#' * `html_form_set()` returns an `rvest_form` object.
+#'
+#' * `html_form_submit()` submits the form, returning an httr response which
+#'   can be parsed with [read_html()].
+#' @examples
+#' html <- read_html("http://www.google.com")
+#' search <- html_form(html)[[1]]
+#'
+#' search <- search %>% html_form_set(q = "My little pony", hl = "fr")
+#'
+#' # Or if you have a list of values, use !!!
+#' vals <- list(q = "web scraping", hl = "en")
+#' search <- search %>% html_form_set(!!!vals)
+#'
+#' # To submit and get result:
+#' \dontrun{
+#' resp <- html_form_submit(search)
+#' read_html(resp)
 #' }
-html_form <- function(x) UseMethod("html_form")
+html_form <- function(x, base_url = NULL) UseMethod("html_form")
 
 #' @export
-html_form.xml_document <- function(x) {
-  html_form(xml2::xml_find_all(x, ".//form"))
+html_form.xml_document <- function(x, base_url = NULL) {
+  html_form(xml2::xml_find_all(x, ".//form"), base_url = base_url)
 }
 
 #' @export
-html_form.xml_nodeset <- function(x) {
-  lapply(x, html_form)
+html_form.xml_nodeset <- function(x, base_url = NULL) {
+  lapply(x, html_form, base_url = base_url)
 }
 
 #' @export
-html_form.xml_node <- function(x) {
+html_form.xml_node <- function(x, base_url = NULL) {
   stopifnot(xml2::xml_name(x) == "form")
 
   attr <- as.list(xml2::xml_attrs(x))
   name <- attr$id %||% attr$name %||% "<unnamed>" # for human readers
-  method <- toupper(attr$method) %||% "GET"
+  method <- toupper(attr$method %||% "GET")
   enctype <- convert_enctype(attr$enctype)
 
-  fields <- parse_fields(x)
-
-  structure(
-    list(
-      name = name,
-      method = method,
-      url = attr$action,
-      enctype = enctype,
-      fields = fields
-    ),
-    class = "form")
-}
-
-convert_enctype <- function(x) {
-  if (is.null(x)) return("form")
-  if (x == "application/x-www-form-urlencoded") return("form")
-  if (x == "multipart/form-data") return("multipart")
-
-  warning("Unknown enctype (", x, "). Defaulting to form encoded.",
-    call. = FALSE)
-  "form"
-}
-
-#' @export
-print.form <- function(x, indent = 0, ...) {
-  cat("<form> '", x$name, "' (", x$method, " ", x$url, ")\n", sep = "")
-  print(x$fields, indent = indent + 1)
-}
-
-#' @export
-format.input <- function(x, ...) {
-  if (x$type == "password") {
-    value <- paste0(rep("*", nchar(x$value) %||% 0), collapse = "")
-  } else {
-    value <- x$value
-  }
-  paste0("<input ", x$type, "> '", x$name, "': ", value)
-}
-
-parse_fields <- function(form) {
-  raw <- html_nodes(form, "input, select, textarea, button")
-
-  fields <- lapply(raw, function(x) {
+  nodes <- html_elements(x, "input, select, textarea, button")
+  fields <- lapply(nodes, function(x) {
     switch(xml2::xml_name(x),
       textarea = parse_textarea(x),
       input = parse_input(x),
@@ -83,70 +63,204 @@ parse_fields <- function(form) {
       button = parse_button(x)
     )
   })
-  names(fields) <- pluck(fields, "name")
-  class(fields) <- "fields"
-  fields
-}
-
-#' @export
-print.fields <- function(x, ..., indent = 0) {
-  cat(format_list(x, indent = indent), "\n", sep = "")
-}
-
-# <input>: type, name, value, checked, maxlength, id, disabled, readonly, required
-# Input types:
-# * text/email/url/search
-# * password: don't print
-# * checkbox:
-# * radio:
-# * submit:
-# * image: not supported
-# * reset: ignored (client side only)
-# * button: ignored (client side only)
-# * hidden
-# * file
-# * number/range (min, max, step)
-# * date/datetime/month/week/time
-# * (if unknown treat as text)
-parse_input <- function(input) {
-  stopifnot(inherits(input, "xml_node"), xml2::xml_name(input) == "input")
-  attr <- as.list(xml2::xml_attrs(input))
+  names(fields) <- map_chr(fields, function(x) x$name %||% "")
 
   structure(
     list(
-      name = attr$name,
-      type = attr$type %||% "text",
-      value = attr$value %||% NULL,
-      checked = attr$checked,
-      disabled = attr$disabled,
-      readonly = attr$readonly,
-      required = attr$required %||% FALSE
+      name = name,
+      method = method,
+      action = xml2::url_absolute(attr$action, base_url %||% xml2::xml_url(x)),
+      enctype = enctype,
+      fields = fields
     ),
-    class = "input"
+    class = "rvest_form")
+}
+
+#' @export
+print.rvest_form <- function(x, ...) {
+  cat("<form> '", x$name, "' (", x$method, " ", x$action, ")\n", sep = "")
+  cat(format_list(x$fields, indent = 1), "\n", sep = "")
+}
+
+
+# set ----------------------------------------------------------------
+
+#' @rdname html_form
+#' @param form A form
+#' @param ... <[`dynamic-dots`][rlang::dyn-dots]> Name-value pairs giving
+#'   fields to modify.
+#'
+#'   Provide a character vector to set multiple checkboxes in a set or
+#'   select multiple values from a multi-select.
+#' @export
+html_form_set <- function(form, ...) {
+  check_form(form)
+
+  new_values <- list2(...)
+  check_fields(form, new_values)
+
+  for (field in names(new_values)) {
+    type <- form$fields[[field]]$type %||% "non-input"
+    if (type == "hidden") {
+      warn(paste0("Setting value of hidden field '", field, "'."))
+    } else if (type == "submit") {
+      abort(paste0("Can't change value of input with type submit: '", field, "'."))
+    }
+
+    form$fields[[field]]$value <- new_values[[field]]
+  }
+
+  form
+}
+
+# submit ------------------------------------------------------------------
+
+#' @rdname html_form
+#' @param submit Which button should be used to submit the form?
+#'   * `NULL`, the default, uses the first button.
+#'   * A string selects a button by its name.
+#'   * A number selects a button using its relative position.
+#' @export
+html_form_submit <- function(form, submit = NULL) {
+  check_form(form)
+
+  subm <- submission_build(form, submit)
+  submission_submit(subm)
+}
+
+submission_build <- function(form, submit) {
+  method <- form$method
+  if (!(method %in% c("POST", "GET"))) {
+    warn(paste0("Invalid method (", method, "), defaulting to GET"))
+    method <- "GET"
+  }
+
+  if (length(form$action) == 0) {
+    abort("`form` doesn't contain a `action` attribute")
+  }
+
+  list(
+    method = method,
+    enctype = form$enctype,
+    action = form$action,
+    values = submission_build_values(form, submit)
   )
 }
 
-parse_select <- function(select) {
-  stopifnot(inherits(select, "xml_node"), xml2::xml_name(select) == "select")
+submission_submit <- function(x, ...) {
+  if (x$method == "POST") {
+    httr::POST(url = x$action, body = x$values, encode = x$enctype, ...)
+  } else {
+    httr::GET(url = x$action, query = x$values, ...)
+  }
+}
 
-  attr <- as.list(xml2::xml_attrs(select))
-  options <- parse_options(html_nodes(select, "option"))
+submission_build_values <- function(form, submit = NULL) {
+  fields <- form$fields
+  submit <- submission_find_submit(fields, submit)
+  entry_list <- c(Filter(Negate(is_button), fields), list(submit))
+  entry_list <- Filter(function(x) !is.null(x$name), entry_list)
 
+  if (length(entry_list) == 0) {
+    return(list())
+  }
+
+  values <- lapply(entry_list, function(x) as.character(x$value))
+  names <- map_chr(entry_list, "[[", "name")
+
+  out <- set_names(unlist(values, use.names = FALSE), rep(names, lengths(values)))
+  as.list(out)
+}
+
+submission_find_submit <- function(fields, idx) {
+  buttons <- Filter(is_button, fields)
+
+  if (is.null(idx)) {
+    if (length(buttons) == 0) {
+      list()
+    } else {
+      if (length(buttons) > 1) {
+        inform(paste0("Submitting with '", buttons[[1]]$name, "'"))
+      }
+      buttons[[1]]
+    }
+  } else if (is.numeric(idx) && length(idx) == 1) {
+    if (idx < 1 || idx > length(buttons)) {
+      abort("Numeric `submit` out of range")
+    }
+    buttons[[idx]]
+  } else if (is.character(idx) && length(idx) == 1) {
+    if (!idx %in% names(buttons)) {
+      abort(c(
+        paste0("No <input> found with name '", idx, "'."),
+        i = paste0("Possible values: ", paste0(names(buttons), collapse = ", "))
+      ))
+    }
+    buttons[[idx]]
+  } else {
+    abort("`submit` must be NULL, a string, or a number.")
+  }
+}
+
+is_button <- function(x) {
+  tolower(x$type) %in% c("submit", "image", "button")
+}
+
+# Field parsing -----------------------------------------------------------
+
+rvest_field <- function(type, name, value, attr, ...) {
   structure(
     list(
-      name = attr$name,
-      value = options$value,
-      options = options$options
+      type = type,
+      name = name,
+      value = value,
+      attr = attr,
+      ...
     ),
-    class = "select"
+    class = "rvest_field"
   )
 }
 
 #' @export
-format.select <- function(x, ...) {
-  paste0("<select> '", x$name, "' [", length(x$value), "/", length(x$options), "]")
+format.rvest_field <- function(x, ...) {
+  if (x$type == "password") {
+    value <- paste0(rep("*", nchar(x$value %||% "")), collapse = "")
+  } else {
+    value <- paste(x$value, collapse = ", ")
+    value <- str_trunc(encodeString(value), 20)
+  }
+
+  paste0("<field> (", x$type, ") ", x$name, ": ", value)
 }
 
+#' @export
+print.rvest_field <- function(x, ...) {
+  cat(format(x, ...), "\n", sep = "")
+  invisible(x)
+}
+
+parse_input <- function(x) {
+  attr <- as.list(xml2::xml_attrs(x))
+  rvest_field(
+    type = attr$type %||% "text",
+    name = attr$name,
+    value = attr$value,
+    attr = attr
+  )
+}
+
+parse_select <- function(x) {
+  attr <- as.list(xml2::xml_attrs(x))
+  options <- parse_options(html_elements(x, "option"))
+
+  rvest_field(
+    type = "select",
+    name = attr$name,
+    value = options$value,
+    attr = attr,
+    options = options$options
+  )
+}
 parse_options <- function(options) {
   parse_option <- function(option) {
     name <- xml2::xml_text(option)
@@ -158,9 +272,9 @@ parse_options <- function(options) {
   }
 
   parsed <- lapply(options, parse_option)
-  value <- pluck(parsed, "value", character(1))
-  name <- pluck(parsed, "name", character(1))
-  selected <- pluck(parsed, "selected", logical(1))
+  value <-  map_chr(parsed, "[[", "value")
+  name <- map_chr(parsed, "[[", "name")
+  selected <- map_lgl(parsed, "[[", "selected")
 
   list(
     value = value[selected],
@@ -168,165 +282,54 @@ parse_options <- function(options) {
   )
 }
 
-parse_textarea <- function(textarea) {
-  attr <- as.list(xml2::xml_attrs(textarea))
+parse_textarea <- function(x) {
+  attr <- as.list(xml2::xml_attrs(x))
 
-  structure(
-    list(
-      name = attr$name,
-      value = xml2::xml_text(textarea)
-    ),
-    class = "textarea"
+  rvest_field(
+    type = "textarea",
+    name = attr$name,
+    value = xml2::xml_text(x),
+    attr = attr
   )
 }
 
-#' @export
-format.textarea <- function(x, ...) {
-  paste0("<textarea> '", x$name, "' [", nchar(x$value), " char]")
-}
+parse_button <- function(x) {
+  attr <- as.list(xml2::xml_attrs(x))
 
-parse_button <- function(button) {
-  stopifnot(inherits(button, "xml_node"), xml2::xml_name(button) == "button")
-  attr <- as.list(xml2::xml_attrs(button))
-
-  structure(
-    list(
-      name = attr$name %||% "<unnamed>",
-      type = attr$type,
-      value = attr$value,
-      checked = attr$checked,
-      disabled = attr$disabled,
-      readonly = attr$readonly,
-      required = attr$required %||% FALSE
-    ),
-    class = "button"
+  rvest_field(
+    type = "button",
+    name = attr$name,
+    value = attr$value,
+    attr = attr
   )
 }
 
-#' @export
-format.button <- function(x, ...) {
-  paste0("<button ", x$type, "> '", x$name)
-}
+# Helpers -----------------------------------------------------------------
 
-
-#' Set values in a form.
-#'
-#' @param form Form to modify
-#' @param ... Name-value pairs giving fields to modify
-#' @return An updated form object
-#' @export
-#' @examples
-#' search <- html_form(read_html("http://www.google.com"))[[1]]
-#' set_values(search, q = "My little pony")
-#' set_values(search, hl = "fr")
-#' \dontrun{set_values(search, btnI = "blah")}
-set_values <- function(form, ...) {
-  new_values <- list(...)
-
-  # check for valid names
-  no_match <- setdiff(names(new_values), names(form$fields))
-  if (length(no_match) > 0) {
-    stop("Unknown field names: ", paste(no_match, collapse = ", "),
-      call. = FALSE)
-  }
-
-  for (field in names(new_values)) {
-    type <- form$fields[[field]]$type %||% "non-input"
-    if (type == "hidden") {
-      warning("Setting value of hidden field '", field, "'.", call. = FALSE)
-    } else if (type == "submit") {
-      stop("Can't change value of submit input '", field, "'.", call. = FALSE)
-    }
-
-    form$fields[[field]]$value <- new_values[[field]]
-  }
-
-  form
-
-}
-
-#' Submit a form back to the server.
-#'
-#' @param session Session to submit form to.
-#' @param form Form to submit
-#' @param submit Name of submit button to use. If not supplied, defaults to
-#'   first submission button on the form (with a message).
-#' @param ... Additional arguments passed on to [httr::GET()]
-#'   or [httr::POST()]
-#' @return If successful, the parsed html response. Throws an error if http
-#'   request fails.
-#' @export
-submit_form <- function(session, form, submit = NULL, ...) {
-  request <- submit_request(form, submit)
-  url <- xml2::url_absolute(form$url, session$url)
-
-  # Make request
-  if (request$method == "GET") {
-    request_GET(session, url = url, query = request$values, ...)
-  } else if (request$method == "POST") {
-    request_POST(session, url = url, body = request$values,
-      encode = request$encode, ...)
+convert_enctype <- function(x) {
+  if (is.null(x)) {
+    "form"
+  } else if (x == "application/x-www-form-urlencoded") {
+    "form"
+  } else if (x == "multipart/form-data") {
+    "multipart"
   } else {
-    stop("Unknown method: ", request$method, call. = FALSE)
+    warn(paste0("Unknown enctype (", x, "). Defaulting to form encoded."))
+    "form"
   }
 }
 
-submit_request <- function(form, submit = NULL) {
-  is_submit <- function(x) {
-    if (length(x$type) == 0L) {
-      return(FALSE)
-    }
-    tolower(x$type) %in% c("submit", "image", "button")
-  }
+format_list <- function(x, indent = 0) {
+  spaces <- paste(rep("  ", indent), collapse = "")
 
-  submits <- Filter(is_submit, form$fields)
-  if (length(submits) == 0) {
-    stop("Could not find possible submission target.", call. = FALSE)
-  }
-
-  if (is.null(submit)) {
-    submit <- names(submits)[[1]]
-    message("Submitting with '", submit, "'")
-  }
-  if (!(submit %in% names(submits))) {
-    stop(
-      "Unknown submission name '", submit, "'.\n",
-      "Possible values: ", paste0(names(submits), collapse = ", "),
-      call. = FALSE
-    )
-  }
-  other_submits <- setdiff(names(submits), submit)
-
-  # Parameters needed for http request -----------------------------------------
-  method <- form$method
-  if (!(method %in% c("POST", "GET"))) {
-    warning("Invalid method (", method, "), defaulting to GET", call. = FALSE)
-    method <- "GET"
-  }
-
-  url <- form$url
-
-  fields <- form$fields
-  fields <- Filter(function(x) length(x$value) > 0, fields)
-  fields <- fields[setdiff(names(fields), other_submits)]
-
-  values <- pluck(fields, "value")
-  names(values) <- names(fields)
-
-  list(
-    method = method,
-    encode = form$enctype,
-    url = url,
-    values = values
-  )
+  formatted <- vapply(x, format, character(1))
+  paste0(spaces, formatted, collapse = "\n")
 }
 
-#' Make link to google form given id
-#'
-#' @param x Unique identifier for form
-#' @export
-#' @examples
-#' google_form("1M9B8DsYNFyDjpwSK6ur_bZf8Rv_04ma3rmaaBiveoUI")
-google_form <- function(x) {
-  xml2::read_html(httr::GET(paste0("https://docs.google.com/forms/d/", x, "/viewform")))
+check_fields <- function(form, values) {
+  no_match <- setdiff(names(values), names(form$fields))
+  if (length(no_match) > 0) {
+    str <- paste("'", no_match, "'", collapse = ", ")
+    abort(paste0("Can't set value of fields that don't exist: ", str))
+  }
 }

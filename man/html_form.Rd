@@ -2,23 +2,66 @@
 % Please edit documentation in R/form.R
 \name{html_form}
 \alias{html_form}
-\title{Parse forms in a page.}
+\alias{html_form_set}
+\alias{html_form_submit}
+\title{Parse forms and set values}
 \usage{
-html_form(x)
+html_form(x, base_url = NULL)
+
+html_form_set(form, ...)
+
+html_form_submit(form, submit = NULL)
 }
 \arguments{
-\item{x}{A node, node set or document.}
+\item{x}{A document (from \code{\link[=read_html]{read_html()}}), node set (from \code{\link[=html_elements]{html_elements()}}),
+node (from \code{\link[=html_element]{html_element()}}), or session (from \code{\link[=session]{session()}}).}
+
+\item{base_url}{Base url of underlying HTML document. The default, \code{NULL},
+uses the url of the HTML document underlying \code{x}.}
+
+\item{form}{A form}
+
+\item{...}{<\code{\link[rlang:dyn-dots]{dynamic-dots}}> Name-value pairs giving
+fields to modify.
+
+Provide a character vector to set multiple checkboxes in a set or
+select multiple values from a multi-select.}
+
+\item{submit}{Which button should be used to submit the form?
+\itemize{
+\item \code{NULL}, the default, uses the first button.
+\item A string selects a button by its name.
+\item A number selects a button using its relative position.
+}}
+}
+\value{
+\itemize{
+\item \code{html_form()} returns as S3 object with class \code{rvest_form} when applied
+to a single element. It returns a list of \code{rvest_form} objects when
+applied to multiple elements or a document.
+\item \code{html_form_set()} returns an \code{rvest_form} object.
+\item \code{html_form_submit()} submits the form, returning an httr response which
+can be parsed with \code{\link[=read_html]{read_html()}}.
+}
 }
 \description{
-Parse forms in a page.
+Use \code{html_form()} to extract a form, set values with \code{html_form_set()},
+and submit it with \code{html_form_submit()}.
 }
 \examples{
-\donttest{
-html_form(read_html("https://hadley.wufoo.com/forms/libraryrequire-quiz/"))
-html_form(read_html("https://hadley.wufoo.com/forms/r-journal-submission/"))
+html <- read_html("http://www.google.com")
+search <- html_form(html)[[1]]
 
-box_office <- read_html("http://www.boxofficemojo.com/movies/?id=ateam.htm")
-box_office \%>\% html_node("form") \%>\% html_form()
+search <- search \%>\% html_form_set(q = "My little pony", hl = "fr")
+
+# Or if you have a list of values, use !!!
+vals <- list(q = "web scraping", hl = "en")
+search <- search \%>\% html_form_set(!!!vals)
+
+# To submit and get result:
+\dontrun{
+resp <- html_form_submit(search)
+read_html(resp)
 }
 }
 \seealso{

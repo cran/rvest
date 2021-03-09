@@ -2,37 +2,51 @@
 % Please edit documentation in R/table.R
 \name{html_table}
 \alias{html_table}
-\title{Parse an html table into a data frame.}
+\title{Parse an html table into a data frame}
 \usage{
-html_table(x, header = NA, trim = TRUE, fill = FALSE, dec = ".")
+html_table(
+  x,
+  header = NA,
+  trim = TRUE,
+  fill = deprecated(),
+  dec = ".",
+  na.strings = "NA",
+  convert = TRUE
+)
 }
 \arguments{
-\item{x}{A node, node set or document.}
+\item{x}{A document (from \code{\link[=read_html]{read_html()}}), node set (from \code{\link[=html_elements]{html_elements()}}),
+node (from \code{\link[=html_element]{html_element()}}), or session (from \code{\link[=session]{session()}}).}
 
 \item{header}{Use first row as header? If \code{NA}, will use first row
-if it consists of \verb{<th>} tags.}
+if it consists of \verb{<th>} tags.
+
+If \code{TRUE}, column names are left exactly as they are in the source
+document, which may require post-processing to generate a valid data
+frame.}
 
 \item{trim}{Remove leading and trailing whitespace within each cell?}
 
-\item{fill}{If \code{TRUE}, automatically fill rows with fewer than
-the maximum number of columns with \code{NA}s.}
+\item{fill}{Deprecated - missing cells in tables are now always
+automatically filled with \code{NA}.}
 
-\item{dec}{The character used as decimal mark.}
+\item{dec}{The character used as decimal place marker.}
+
+\item{na.strings}{Character vector of values that will be converted to \code{NA}
+if \code{convert} is \code{TRUE}.}
+
+\item{convert}{If \code{TRUE}, will run \code{\link[=type.convert]{type.convert()}} to interpret texts as
+integer, double, or \code{NA}.}
+}
+\value{
+When applied to a single element, \code{html_table()} returns a single tibble.
+When applied to multiple elements or a document, \code{html_table()} returns
+a list of tibbles.
 }
 \description{
-Parse an html table into a data frame.
+The algorithm mimics what a browser does, but repeats the values of merged
+cells in every cell that cover.
 }
-\section{Assumptions}{
-
-
-\code{html_table} currently makes a few assumptions:
-
-\itemize{
-\item No cells span multiple rows
-\item Headers are in the first row
-}
-}
-
 \examples{
 sample1 <- minimal_html("<table>
   <tr><th>Col A</th><th>Col B</th></tr>
@@ -41,7 +55,7 @@ sample1 <- minimal_html("<table>
   <tr><td>10</td><td>z</td></tr>
 </table>")
 sample1 \%>\%
-  html_node("table") \%>\%
+  html_element("table") \%>\%
   html_table()
 
 # Values in merged cells will be duplicated
@@ -51,21 +65,18 @@ sample2 <- minimal_html("<table>
   <tr><td colspan='2'>4</td><td>5</td></tr>
   <tr><td>6</td><td colspan='2'>7</td></tr>
 </table>")
-
 sample2 \%>\%
-  html_node("table") \%>\%
+  html_element("table") \%>\%
   html_table()
 
-# If the table is badly formed, and has different number of columns
-# in each row, use `fill = TRUE` to fill in the missing values
+# If a row is missing cells, they'll be filled with NAs
 sample3 <- minimal_html("<table>
   <tr><th>A</th><th>B</th><th>C</th></tr>
   <tr><td colspan='2'>1</td><td>2</td></tr>
   <tr><td colspan='2'>3</td></tr>
   <tr><td>4</td></tr>
 </table>")
-
 sample3 \%>\%
-  html_node("table") \%>\%
-  html_table(fill = TRUE)
+  html_element("table") \%>\%
+  html_table()
 }

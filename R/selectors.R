@@ -1,17 +1,9 @@
-#' Select nodes from an HTML document
+#' Select elements from an HTML document
 #'
-#' More easily extract pieces out of HTML documents using XPath and CSS
-#' selectors. CSS selectors are particularly useful in conjunction with
-#' <http://selectorgadget.com/>: it makes it easy to find exactly
-#' which selector you should be using. If you haven't used CSS selectors
-#' before, work your way through the fun tutorial at
-#' <http://flukeout.github.io/>
-#'
-#' @section `html_node` vs `html_nodes`:
-#' `html_node` is like `[[` it always extracts exactly one
-#' element. When given a list of nodes, `html_node` will always return
-#' a list of the same length, the length of `html_nodes` might be longer
-#' or shorter.
+#' `html_element()` and `html_elements()` find HTML element using CSS selectors
+#' or XPath expressions. CSS selectors are particularly useful in conjunction
+#' with <https://selectorgadget.com/>, which makes it very easy to discover the
+#' selector you need.
 #'
 #' @section CSS selector support:
 #'
@@ -23,89 +15,75 @@
 #' <http://www.w3.org/TR/2011/REC-css3-selectors-20110929/>. The
 #' exceptions are listed below:
 #'
-#' \itemize{
-#' \item Pseudo selectors that require interactivity are ignored:
-#'   `:hover`, `:active`, `:focus`, `:target`,
-#'   `:visited`
-#' \item The following pseudo classes don't work with the wild card element, *:
+#' * Pseudo selectors that require interactivity are ignored:
+#'   `:hover`, `:active`, `:focus`, `:target`, `:visited`.
+#' * The following pseudo classes don't work with the wild card element, *:
 #'   `*:first-of-type`, `*:last-of-type`, `*:nth-of-type`,
 #'   `*:nth-last-of-type`, `*:only-of-type`
-#' \item It supports `:contains(text)`
-#' \item You can use !=, `[foo!=bar]` is the same as `:not([foo=bar])`
-#' \item `:not()` accepts a sequence of simple selectors, not just single
+#' * It supports `:contains(text)`
+#' * You can use !=, `[foo!=bar]` is the same as `:not([foo=bar])`
+#' * `:not()` accepts a sequence of simple selectors, not just a single
 #'   simple selector.
-#' }
 #'
 #' @param x Either a document, a node set or a single node.
-#' @param css,xpath Nodes to select. Supply one of `css` or `xpath`
-#'   depending on whether you want to use a CSS or XPath 1.0 selector.
+#' @param css,xpath Elements to select. Supply one of `css` or `xpath`
+#'   depending on whether you want to use a CSS selector or XPath 1.0
+#'   expression.
+#' @returns `html_element()` returns a nodeset the same length as the input.
+#'   `html_elements()` flattens the output so there's no direct way to map
+#'   the output to the input.
 #' @export
 #' @examples
-#' # CSS selectors ----------------------------------------------
-#' url <- paste0(
-#'   "https://web.archive.org/web/20190202054736/",
-#'   "https://www.boxofficemojo.com/movies/?id=ateam.htm"
-#' )
-#' ateam <- read_html(url)
-#' html_nodes(ateam, "center")
-#' html_nodes(ateam, "center font")
-#' html_nodes(ateam, "center font b")
+#' html <- minimal_html("
+#'   <h1>This is a heading</h1>
+#'   <p id='first'>This is a paragraph</p>
+#'   <p class='important'>This is an important paragraph</p>
+#' ")
 #'
-#' # But html_node is best used in conjunction with %>% from magrittr
-#' # You can chain subsetting:
-#' ateam %>% html_nodes("center") %>% html_nodes("td")
-#' ateam %>% html_nodes("center") %>% html_nodes("font")
+#' html %>% html_element("h1")
+#' html %>% html_elements("p")
+#' html %>% html_elements(".important")
+#' html %>% html_elements("#first")
 #'
-#' td <- ateam %>% html_nodes("center") %>% html_nodes("td")
-#' td
-#' # When applied to a list of nodes, html_nodes() returns all nodes,
-#' # collapsing results into a new nodelist.
-#' td %>% html_nodes("font")
-#' # html_node() returns the first matching node. If there are no matching
-#' # nodes, it returns a "missing" node
-#' if (utils::packageVersion("xml2") > "0.1.2") {
-#'   td %>% html_node("font")
-#' }
+#' # html_element() vs html_elements() --------------------------------------
+#' html <- minimal_html("
+#'   <ul>
+#'     <li><b>C-3PO</b> is a <i>droid</i> that weighs <span class='weight'>167 kg</span></li>
+#'     <li><b>R2-D2</b> is a <i>droid</i> that weighs <span class='weight'>96 kg</span></li>
+#'     <li><b>Yoda</b> weighs <span class='weight'>66 kg</span></li>
+#'     <li><b>R4-P17</b> is a <i>droid</i></li>
+#'   </ul>
+#' ")
+#' li <- html %>% html_elements("li")
 #'
-#' # To pick out an element at specified position, use magrittr::extract2
-#' # which is an alias for [[
-#' library(magrittr)
-#' ateam %>% html_nodes("table") %>% extract2(1) %>% html_nodes("img")
-#' ateam %>% html_nodes("table") %>% `[[`(1) %>% html_nodes("img")
+#' # When applied to a node set, html_elements() returns all matching elements
+#' # beneath any of the inputs, flattening results into a new node set.
+#' li %>% html_elements("i")
 #'
-#' # Find all images contained in the first two tables
-#' ateam %>% html_nodes("table") %>% `[`(1:2) %>% html_nodes("img")
-#' ateam %>% html_nodes("table") %>% extract(1:2) %>% html_nodes("img")
-#'
-#' # XPath selectors ---------------------------------------------
-#' # chaining with XPath is a little trickier - you may need to vary
-#' # the prefix you're using - // always selects from the root node
-#' # regardless of where you currently are in the doc
-#' ateam %>%
-#'   html_nodes(xpath = "//center//font//b") %>%
-#'   html_nodes(xpath = "//b")
-html_nodes <- function(x, css, xpath) {
-  UseMethod("html_nodes")
+#' # When applied to a node set, html_element() always returns a vector the
+#' # same length as the input, using a "missing" element where needed.
+#' li %>% html_element("i")
+#' # and html_text() and html_attr() will return NA
+#' li %>% html_element("i") %>% html_text2()
+#' li %>% html_element("span") %>% html_attr("class")
+html_element <- function(x, css, xpath) {
+  UseMethod("html_element")
 }
 
 #' @export
-html_nodes.default <- function(x, css, xpath) {
+#' @rdname html_element
+html_elements <- function(x, css, xpath) {
+  UseMethod("html_elements")
+}
+
+#' @export
+html_elements.default <- function(x, css, xpath) {
   xml2::xml_find_all(x, make_selector(css, xpath))
 }
 
 #' @export
-#' @rdname html_nodes
-html_node <- function(x, css, xpath) {
-  UseMethod("html_node")
-}
-
-#' @export
-html_node.default <- function(x, css, xpath) {
-  if (utils::packageVersion("xml2") > "0.1.2") {
-    xml2::xml_find_first(x, make_selector(css, xpath))
-  } else {
-    xml2::xml_find_one(x, make_selector(css, xpath))
-  }
+html_element.default <- function(x, css, xpath) {
+  xml2::xml_find_first(x, make_selector(css, xpath))
 }
 
 make_selector <- function(css, xpath) {

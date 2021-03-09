@@ -1,105 +1,109 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# rvest <img src='man/figures/logo.png' align="right" height="139" />
+# rvest <img src="man/figures/logo.png" align="right" height="139"/>
 
 <!-- badges: start -->
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/rvest)](https://cran.r-project.org/package=rvest)
-[![R build
-status](https://github.com/tidyverse/rvest/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/rvest/actions)
+[![R-CMD-check](https://github.com/tidyverse/rvest/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/rvest/actions)
 [![Codecov test
 coverage](https://codecov.io/gh/tidyverse/rvest/branch/master/graph/badge.svg)](https://codecov.io/gh/tidyverse/rvest?branch=master)
+
 <!-- badges: end -->
 
 ## Overview
 
-rvest helps you scrape information from web pages. It is designed to
-work with [magrittr](https://github.com/smbache/magrittr) to make it
-easy to express common web scraping tasks, inspired by libraries like
-[beautiful soup](https://www.crummy.com/software/BeautifulSoup/).
+rvest helps you scrape (or harvest) data from web pages. It is designed
+to work with [magrittr](https://github.com/tidyverse/magrittr) to make
+it easy to express common web scraping tasks, inspired by libraries like
+[beautiful soup](https://www.crummy.com/software/BeautifulSoup/) and
+[RoboBrowser](http://robobrowser.readthedocs.io/en/latest/readme.html).
 
-``` r
-library(rvest)
-lego_movie <- read_html("http://www.imdb.com/title/tt1490017/")
-
-rating <- lego_movie %>% 
-  html_nodes("strong span") %>%
-  html_text() %>%
-  as.numeric()
-rating
-#> [1] 7.7
-
-cast <- lego_movie %>%
-  html_nodes("#titleCast .primary_photo img") %>%
-  html_attr("alt")
-cast
-#>  [1] "Will Arnett"     "Elizabeth Banks" "Craig Berry"     "Alison Brie"    
-#>  [5] "David Burrows"   "Anthony Daniels" "Charlie Day"     "Amanda Farinos" 
-#>  [9] "Keith Ferguson"  "Will Ferrell"    "Will Forte"      "Dave Franco"    
-#> [13] "Morgan Freeman"  "Todd Hansen"     "Jonah Hill"
-
-poster <- lego_movie %>%
-  html_nodes(".poster img") %>%
-  html_attr("src")
-poster
-#> [1] "https://m.media-amazon.com/images/M/MV5BMTg4MDk1ODExN15BMl5BanBnXkFtZTgwNzIyNjg3MDE@._V1_UX182_CR0,0,182,268_AL_.jpg"
-```
+If you’re scraping multiple pages, I highly recommend using rvest in
+concert with [polite](https://dmi3kno.github.io/polite/). The polite
+package ensures that you’re respecting the
+[robots.txt](https://en.wikipedia.org/wiki/Robots_exclusion_standard)
+and not hammering the site with too many requests.
 
 ## Installation
 
-Install the release version from CRAN:
-
 ``` r
+# The easiest way to get rvest is to install the whole tidyverse:
+install.packages("tidyverse")
+
+# Alternatively, install just rvest:
 install.packages("rvest")
 ```
 
-Or the development version from GitHub
+## Usage
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("tidyverse/rvest")
+library(rvest)
+
+# Start by reading a HTML page with read_html():
+starwars <- read_html("https://rvest.tidyverse.org/articles/starwars.html")
+
+# Then find elements that match a css selector or XPath expression
+# using html_elements(). In this example, each <section> corresponds
+# to a different film
+films <- starwars %>% html_elements("section")
+films
+#> {xml_nodeset (7)}
+#> [1] <section><h2 data-id="1">\nThe Phantom Menace\n</h2>\n<p>\nReleased: 1999 ...
+#> [2] <section><h2 data-id="2">\nAttack of the Clones\n</h2>\n<p>\nReleased: 20 ...
+#> [3] <section><h2 data-id="3">\nRevenge of the Sith\n</h2>\n<p>\nReleased: 200 ...
+#> [4] <section><h2 data-id="4">\nA New Hope\n</h2>\n<p>\nReleased: 1977-05-25\n ...
+#> [5] <section><h2 data-id="5">\nThe Empire Strikes Back\n</h2>\n<p>\nReleased: ...
+#> [6] <section><h2 data-id="6">\nReturn of the Jedi\n</h2>\n<p>\nReleased: 1983 ...
+#> [7] <section><h2 data-id="7">\nThe Force Awakens\n</h2>\n<p>\nReleased: 2015- ...
+
+# Then use html_element() to extract one element per film. Here
+# we the title is given by the text inside <h2>
+title <- films %>% 
+  html_element("h2") %>% 
+  html_text2()
+title
+#> [1] "The Phantom Menace"      "Attack of the Clones"   
+#> [3] "Revenge of the Sith"     "A New Hope"             
+#> [5] "The Empire Strikes Back" "Return of the Jedi"     
+#> [7] "The Force Awakens"
+
+# Or use html_attr() to get data out of attributes. html_attr() always
+# returns a string so we convert it to an integer using a readr function
+episode <- films %>% 
+  html_element("h2") %>% 
+  html_attr("data-id") %>% 
+  readr::parse_integer()
+episode
+#> [1] 1 2 3 4 5 6 7
 ```
 
-## Key functions
+If the page contains tabular data you can convert it directly to a data
+frame with `html_table()`:
 
-Once you have read a HTML document with `read_html()`, you can:
+``` r
+html <- read_html("https://en.wikipedia.org/w/index.php?title=The_Lego_Movie&oldid=998422565")
 
-  - Select parts of a document using CSS selectors: `html_nodes(doc,
-    "table td")` (or if you’ve a glutton for punishment, use XPath
-    selectors with `html_nodes(doc, xpath = "//table//td")`). If you
-    haven’t heard of [selectorgadget](http://selectorgadget.com/), make
-    sure to read `vignette("selectorgadget")` to learn about it.
-
-  - Extract components with `html_name()` (the name of the tag),
-    `html_text()` (all text inside the tag), `html_attr()` (contents of
-    a single attribute) and `html_attrs()` (all attributes).
-
-  - (You can also use rvest with XML files: parse with `xml()`, then
-    extract components using `xml_node()`, `xml_attr()`, `xml_attrs()`,
-    `xml_text()` and `xml_name()`.)
-
-  - Parse tables into data frames with `html_table()`.
-
-  - Extract, modify and submit forms with `html_form()`, `set_values()`
-    and `submit_form()`.
-
-  - Detect and repair encoding problems with `guess_encoding()` and
-    `repair_encoding()`.
-
-  - Navigate around a website as if you’re in a browser with
-    `html_session()`, `jump_to()`, `follow_link()`, `back()`,
-    `forward()`, `submit_form()` and so on. (This is still a work in
-    progress, so I’d love your feedback.)
-
-To see examples of these function in use, check out the demos.
-
-## Inspirations
-
-  - Python:
-    [RoboBrowser](http://robobrowser.readthedocs.org/en/latest/readme.html),
-    [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/).
+html %>% 
+  html_element(".tracklist") %>% 
+  html_table()
+#> # A tibble: 29 x 4
+#>    No.   Title                    `Performer(s)`                          Length
+#>    <chr> <chr>                    <chr>                                   <chr> 
+#>  1 1.    "\"Everything Is Awesom… "Tegan and Sara featuring The Lonely I… 2:43  
+#>  2 2.    "\"Prologue\""           ""                                      2:28  
+#>  3 3.    "\"Emmett's Morning\""   ""                                      2:00  
+#>  4 4.    "\"Emmett Falls in Love… ""                                      1:11  
+#>  5 5.    "\"Escape\""             ""                                      3:26  
+#>  6 6.    "\"Into the Old West\""  ""                                      1:00  
+#>  7 7.    "\"Wyldstyle Explains\"" ""                                      1:21  
+#>  8 8.    "\"Emmett's Mind\""      ""                                      2:17  
+#>  9 9.    "\"The Transformation\"" ""                                      1:46  
+#> 10 10.   "\"Saloons and Wagons\"" ""                                      3:38  
+#> # … with 19 more rows
+```
 
 ## Code of Conduct
 
