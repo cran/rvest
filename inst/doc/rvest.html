@@ -151,9 +151,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&lt;title&gt;</span>Page title<span class="kw">&lt;/title&gt;</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;/head&gt;</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;body&gt;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&lt;h1</span><span class="ot"> id=</span><span class="st">&#39;first&#39;</span><span class="kw">&gt;</span>A heading<span class="kw">&lt;/h1&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&lt;h1</span> <span class="er">id</span><span class="ot">=</span><span class="st">&#39;first&#39;</span><span class="kw">&gt;</span>A heading<span class="kw">&lt;/h1&gt;</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&lt;p&gt;</span>Some text <span class="dv">&amp;amp;</span> <span class="kw">&lt;b&gt;</span>some bold text.<span class="kw">&lt;/b&gt;&lt;/p&gt;</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&lt;img</span><span class="ot"> src=</span><span class="st">&#39;myimg.png&#39;</span><span class="ot"> width=</span><span class="st">&#39;100&#39;</span><span class="ot"> height=</span><span class="st">&#39;100&#39;</span><span class="kw">&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">&lt;img</span> <span class="er">src</span><span class="ot">=</span><span class="st">&#39;myimg.png&#39;</span> <span class="er">width</span><span class="ot">=</span><span class="st">&#39;100&#39;</span> <span class="er">height</span><span class="ot">=</span><span class="st">&#39;100&#39;</span><span class="kw">&gt;</span></span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">&lt;/body&gt;</span></span></code></pre></div>
 <p>HTML has a hierarchical structure formed by <strong>elements</strong> which consist of a start tag (e.g. <code>&lt;tag&gt;</code>), optional <strong>attributes</strong> (<code>id=&#39;first&#39;</code>), an end tag<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> (like <code>&lt;/tag&gt;</code>), and <strong>contents</strong> (everything in between the start and end tag).</p>
 <p>Since <code>&lt;</code> and <code>&gt;</code> are used for start and end tags, you can’t write them directly. Instead you have to use the HTML <strong>escapes</strong> <code>&amp;gt;</code> (greater than) and <code>&amp;lt;</code> (less than). And since those escapes use <code>&amp;</code>, if you want a literal ampersand you have to escape it as <code>&amp;amp;</code>. There are a wide range of possible HTML escapes but you don’t need to worry about them too much because rvest automatically handles them for you.</p>
@@ -232,7 +232,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>html <span class="sc">%&gt;%</span> <span class="fu">html_elements</span>(<span class="st">&quot;#first&quot;</span>)</span>
 <span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; {xml_nodeset (1)}</span></span>
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &lt;p id=&quot;first&quot;&gt;This is a paragraph&lt;/p&gt;</span></span></code></pre></div>
-<p>Selectors can also be combined in various ways using <strong>combinators</strong>. For example,The most important combinator is &quot; &quot;, the <strong>descendant</strong> combination, because <code>p a</code> selects all <code>&lt;a&gt;</code> elements that are a child of a <code>&lt;p&gt;</code> element.</p>
+<p>Selectors can also be combined in various ways using <strong>combinators</strong>. For example,The most important combinator is ” “, the <strong>descendant</strong> combination, because <code>p a</code> selects all <code>&lt;a&gt;</code> elements that are a child of a <code>&lt;p&gt;</code> element.</p>
 <p>If you don’t know exactly what selector you need, I highly recommend using <a href="https://rvest.tidyverse.org/articles/selectorgadget.html">SelectorGadget</a>, which lets you automatically generate the selector you need by supplying positive and negative examples in the browser.</p>
 </div>
 <div id="extracting-data" class="section level2">
@@ -344,7 +344,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>html <span class="sc">%&gt;%</span> </span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">html_node</span>(<span class="st">&quot;table&quot;</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">html_table</span>()</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 x 2</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 2</span></span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       x     y</span></span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dbl&gt; &lt;dbl&gt;</span></span>
 <span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1   1.5   2.7</span></span>

@@ -1,6 +1,6 @@
 Package: rvest
 Title: Easily Harvest (Scrape) Web Pages
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: 
     c(person(given = "Hadley",
              family = "Wickham",
@@ -22,11 +22,11 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-US
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 NeedsCompilation: no
-Packaged: 2021-07-25 22:42:27 UTC; hadley
+Packaged: 2021-10-15 18:24:40 UTC; hadley
 Author: Hadley Wickham [aut, cre],
   RStudio [cph]
 Maintainer: Hadley Wickham <hadley@rstudio.com>
 Repository: CRAN
-Date/Publication: 2021-07-26 10:40:01 UTC
+Date/Publication: 2021-10-16 23:30:07 UTC
