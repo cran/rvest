@@ -6,7 +6,7 @@
 \alias{rvest-package}
 \title{rvest: Easily Harvest (Scrape) Web Pages}
 \description{
-\if{html}{\figure{logo.png}{options: align='right' alt='logo' width='120'}}
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
 Wrappers around the 'xml2' and 'httr' packages to make it easy to download, then manipulate, HTML and XML.
 }
@@ -24,7 +24,7 @@ Useful links:
 
 Other contributors:
 \itemize{
-  \item RStudio [copyright holder]
+  \item RStudio [copyright holder, funder]
 }
 
 }

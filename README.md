@@ -7,10 +7,9 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/rvest)](https://cran.r-project.org/package=rvest)
-[![R-CMD-check](https://github.com/tidyverse/rvest/workflows/R-CMD-check/badge.svg)](https://github.com/tidyverse/rvest/actions)
+[![R-CMD-check](https://github.com/tidyverse/rvest/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/tidyverse/rvest/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/tidyverse/rvest/branch/master/graph/badge.svg)](https://app.codecov.io/gh/tidyverse/rvest?branch=master)
-
+coverage](https://codecov.io/gh/tidyverse/rvest/branch/main/graph/badge.svg)](https://app.codecov.io/gh/tidyverse/rvest?branch=main)
 <!-- badges: end -->
 
 ## Overview
@@ -104,9 +103,3 @@ html %>%
 #> 10 10.   "\"Saloons and Wagons\""    ""                                   3:38  
 #> # … with 19 more rows
 ```
-
-## Code of Conduct
-
-Please note that the rvest project is released with a [Contributor Code
-of Conduct](https://rvest.tidyverse.org/CODE_OF_CONDUCT.html). By
-contributing to this project, you agree to abide by its terms.
