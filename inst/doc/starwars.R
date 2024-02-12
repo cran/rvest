@@ -1,4 +1,4 @@
-## ---- echo = FALSE, results = "asis"------------------------------------------
+## ----echo = FALSE, results = "asis"-------------------------------------------
 library(rvest)
 crawl_html <- function(x) {
   x %>% 

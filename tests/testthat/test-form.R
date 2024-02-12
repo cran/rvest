@@ -76,6 +76,19 @@ test_that("handles different encoding types", {
   expect_snapshot(convert_enctype("unknown"))
 })
 
+test_that("validates its inputs", {
+  select <- minimal_html("button test", '
+    <form>
+      <button type="submit">Click me</button>
+    </form>
+  ')
+  expect_snapshot(error = TRUE, {
+    html_form(html_element(select, "button"))
+    html_form(select, base_url = 1)
+  })
+
+})
+
 # set --------------------------------------------------------------
 
 test_that("can set values of inputs", {
@@ -188,7 +201,7 @@ test_that("handles no buttons", {
 })
 
 test_that("can submit using three primary techniques", {
-  app <- webfakes::local_app_process(app_request())
+  app <- local_test_app()
 
   html <- minimal_html('
     <form action="/">

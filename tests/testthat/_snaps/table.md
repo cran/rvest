@@ -80,11 +80,19 @@
     Condition
       Warning:
       The `fill` argument of `html_table()` is deprecated as of rvest 1.0.0.
-      An improved algorithm fills by default so it is no longer needed.
+      i An improved algorithm fills by default so it is no longer needed.
     Code
       . <- html_table(html, fill = TRUE)
 
 # can handle empty tables
+
+    # A tibble: 0 x 0
+
+# can handle tables consisting of a single empty row
+
+    # A tibble: 0 x 0
+
+# can handle tables consisting of only empty rows
 
     # A tibble: 0 x 0
 
